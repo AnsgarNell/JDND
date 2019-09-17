@@ -1,9 +1,15 @@
 package com.udacity.vehicles.service;
 
+import com.udacity.vehicles.client.prices.Price;
 import com.udacity.vehicles.domain.car.Car;
 import com.udacity.vehicles.domain.car.CarRepository;
-import java.util.List;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Implements the car service create, read, update or delete
@@ -14,13 +20,17 @@ import org.springframework.stereotype.Service;
 public class CarService {
 
     private final CarRepository repository;
+    private final WebClient mapsClient;
+    private final WebClient pricingClient;
 
-    public CarService(CarRepository repository) {
+    public CarService(CarRepository repository, @Qualifier("maps") WebClient mapsClient, @Qualifier("pricing") WebClient pricingClient) {
         /**
-         * TODO: Add the Maps and Pricing Web Clients you create
+         * Add the Maps and Pricing Web Clients you create
          *   in `VehiclesApiApplication` as arguments and set them here.
          */
         this.repository = repository;
+        this.mapsClient = mapsClient;
+        this.pricingClient = pricingClient;
     }
 
     /**
@@ -38,20 +48,24 @@ public class CarService {
      */
     public Car findById(Long id) {
         /**
-         * TODO: Find the car by ID from the `repository` if it exists.
+         *   Find the car by ID from the `repository` if it exists.
          *   If it does not exist, throw a CarNotFoundException
          *   Remove the below code as part of your implementation.
          */
-        Car car = new Car();
+        Car car;
+        Optional<Car> optionalCar = repository.findById(id);
+        if (optionalCar.isPresent()) car = optionalCar.get();
+        else throw new CarNotFoundException("Car " + id + " was not found.");
 
         /**
-         * TODO: Use the Pricing Web client you create in `VehiclesApiApplication`
+         * Use the Pricing Web client you create in `VehiclesApiApplication`
          *   to get the price based on the `id` input'
-         * TODO: Set the price of the car
+         * Set the price of the car
          * Note: The car class file uses @transient, meaning you will need to call
          *   the pricing service each time to get the price.
          */
-
+        Price price = pricingClient.get().uri("/services/price?vehicleId={id}").retrieve().bodyToMono(Price.class).block();
+        car.setPrice(price.getPrice().toString());
 
         /**
          * TODO: Use the Maps Web client you create in `VehiclesApiApplication`
