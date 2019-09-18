@@ -21,6 +21,8 @@ import com.udacity.vehicles.domain.manufacturer.Manufacturer;
 import com.udacity.vehicles.service.CarService;
 import java.net.URI;
 import java.util.Collections;
+import java.util.List;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -96,7 +98,13 @@ public class CarControllerTest {
          *   the whole list of vehicles. This should utilize the car from `getCar()`
          *   below (the vehicle will be the first in the list).
          */
-
+        Car car = getCar();
+        car.setId(1L);
+        List<Car> carList = Collections.singletonList(car);
+        mvc.perform(get("/cars/"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(content().string(json.write(car).getJson()));
     }
 
     /**
@@ -109,6 +117,14 @@ public class CarControllerTest {
          * TODO: Add a test to check that the `get` method works by calling
          *   a vehicle by ID. This should utilize the car from `getCar()` below.
          */
+        Car car = getCar();
+        car.setId(1L);
+        Long testId = car.getId();
+        mvc.perform(get("/cars/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(jsonPath("$.id", is(car.getId())));
+                //.andExpect(content().string(json.write(car).getJson()));
     }
 
     /**
