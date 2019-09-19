@@ -12,7 +12,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.udacity.vehicles.client.maps.MapsClient;
 import com.udacity.vehicles.client.prices.PriceClient;
@@ -23,8 +22,6 @@ import com.udacity.vehicles.domain.car.Details;
 import com.udacity.vehicles.domain.manufacturer.Manufacturer;
 import com.udacity.vehicles.service.CarService;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -37,6 +34,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.hateoas.hal.Jackson2HalModule;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -80,6 +78,7 @@ public class CarControllerTest {
         given(carService.save(any())).willReturn(car);
         given(carService.findById(any())).willReturn(car);
         given(carService.list()).willReturn(Collections.singletonList(car));
+        objectMapper.registerModule(new Jackson2HalModule());
     }
 
     /**
@@ -110,11 +109,17 @@ public class CarControllerTest {
          */
         Car car = getCar();
         car.setId(1L);
-        List<Car> carList = Collections.singletonList(car);
-        mvc.perform(get("/cars/"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
-                .andExpect(content().string(json.write(car).getJson()));
+        ResultActions resultActions = mvc.perform(get("/cars/"))
+                .andExpect(status().isOk());
+
+        MvcResult result = resultActions.andReturn();
+        String contentAsString = result.getResponse().getContentAsString();
+
+        List<Car> responseCarList = (List<Car>) objectMapper.readValue(objectMapper.readTree(contentAsString).findPath("carList").toString(), new TypeReference<List<Car>>(){});
+        Car responseCar = objectMapper.readValue(contentAsString, Car.class);
+        String responseCarJson = json.write(responseCarList.get(0)).getJson();
+        String carJson = json.write(car).getJson();
+        assert (carJson.equals(responseCarJson));
     }
 
     /**
